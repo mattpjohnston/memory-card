@@ -1,25 +1,30 @@
 import { useEffect, useState } from "react";
 
+const API_URL = "https://dog.ceo/api/breeds/image/random/12";
+
 export default function useFetchCards() {
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const url = "https://dog.ceo/api/breeds/image/random/12";
-
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
+    async function loadCards() {
       try {
         setLoading(true);
         setError(null);
 
-        const result = await fetch(url);
-        if (!result.ok) throw new Error(`HTTP ${result.status}`);
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-        const data = await result.json();
-        if (!cancelled) setCards(data);
+        const data = await response.json();
+        const nextCards = data.message.map((imageUrl) => ({
+          id: crypto.randomUUID(),
+          imageUrl,
+          breed: formatBreedFromUrl(imageUrl),
+        }));
+        if (!cancelled) setCards(nextCards);
       } catch (e) {
         if (!cancelled) setError(e);
       } finally {
@@ -27,7 +32,7 @@ export default function useFetchCards() {
       }
     }
 
-    load();
+    loadCards();
 
     return () => {
       cancelled = true;
@@ -35,4 +40,11 @@ export default function useFetchCards() {
   }, []);
 
   return { cards, loading, error };
+}
+
+function formatBreedFromUrl(url) {
+  const breed = url.split("/")[4].split("-").reverse();
+  return breed
+    .map((splitBreed) => splitBreed[0].toUpperCase() + splitBreed.slice(1))
+    .join(" ");
 }
